@@ -19,10 +19,8 @@ st.caption("Tempat bersandar, bercerita, dan mencari kedamaian hati seorang Ibu.
 st.divider()
 
 # 2. Ambil API Key Otomatis dari Brankas Secrets Streamlit
-if "GEMINI_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["AQ.Ab8RN6IG6zvfA76Yknwk-Km0Y9x4_TCXMbkpN6jZNFuynwVAJA"])
-else:
-    st.error("Waduh Nak, Kunci API (GEMINI_API_KEY) belum dimasukkan ke Secrets Streamlit!")
+
+GEMINI_API_KEY = "AQ.Ab8RN6IG6zvfA76Yknwk-Km0Y9x4_TCXMbkpN6jZNFuynwVAJA"
 
 # 3. Definisikan Persona "Ai Bunda"
 persona_bunda = """
