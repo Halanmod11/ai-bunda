@@ -1,4 +1,4 @@
 streamlit
-google-genai
-edge-tts
+google-generativeai
 streamlit-mic-recorder
+edge-tts
