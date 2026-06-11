@@ -1,9 +1,3 @@
-1. Kembali ke halaman depan repository, lalu klik file **`app.py`**.
-2. Klik tombol **Pensil (Edit this file)**.
-3. Hapus **seluruh isi kode** yang ada di sana tanpa tersisa.
-4. Salin (*Copy*) dan tempel (*Paste*) kode di bawah ini secara utuh:
-
-```python
 import streamlit as st
 import google.generativeai as genai
 import asyncio
@@ -24,8 +18,6 @@ st.title("💖 Ai Bunda")
 st.caption("Tempat bersandar, bercerita, dan mencari kedamaian hati seorang Ibu.")
 st.divider()
 
-# 2. Inisialisasi API Key Secara Langsung & Amandemen Kunci
-# MASUKKAN API KEY KAMU YANG DIAWALI DENGAN AIzaSy DI BAWAH INI:
 API_KEY = "AQ.Ab8RN6IG6zvfA76Yknwk-Km0Y9x4_TCXMbkpN6jZNFuynwVAJA"
 
 genai.configure(api_key=API_KEY)
@@ -87,7 +79,6 @@ if audio_box and audio_box.get('id') != st.session_state.last_audio_id:
     
     with st.spinner("Bunda sedang mendengarkan suaramu..."):
         try:
-            # Menggunakan model lama untuk transkripsi audio gratisan yang stabil
             model_transcribe = genai.GenerativeModel('gemini-1.5-flash')
             response = model_transcribe.generate_content([
                 "Tolong transkrip suara berikut ke dalam teks bahasa Indonesia secara akurat. Cukup tuliskan teks aslinya saja tanpa tambahan penjelasan apapun:",
