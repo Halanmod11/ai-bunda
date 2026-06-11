@@ -1,9 +1,13 @@
+1. Kembali ke halaman depan repository, lalu klik file **`app.py`**.
+2. Klik tombol **Pensil (Edit this file)**.
+3. Hapus **seluruh isi kode** yang ada di sana tanpa tersisa.
+4. Salin (*Copy*) dan tempel (*Paste*) kode di bawah ini secara utuh:
+
+```python
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 import asyncio
 import edge_tts
-import time
 import io
 
 # 1. Konfigurasi Halaman Web
@@ -20,11 +24,11 @@ st.title("💖 Ai Bunda")
 st.caption("Tempat bersandar, bercerita, dan mencari kedamaian hati seorang Ibu.")
 st.divider()
 
-# 2. Inisialisasi API Key Utama
-API_KEY_1 = "AQ.Ab8RN6JfRDtenEADrhqfULs3LBeqq3hiEiqNaGXz2prmq2eUpA"
+# 2. Inisialisasi API Key Secara Langsung & Amandemen Kunci
+# MASUKKAN API KEY KAMU YANG DIAWALI DENGAN AIzaSy DI BAWAH INI:
+API_KEY = "AQ.Ab8RN6IG6zvfA76Yknwk-Km0Y9x4_TCXMbkpN6jZNFuynwVAJA"
 
-def get_genai_client():
-    return genai.Client(api_key=API_KEY_1)
+genai.configure(api_key=API_KEY)
 
 # 3. Definisikan Persona "Ai Bunda"
 persona_bunda = """
@@ -35,42 +39,15 @@ Anda adalah 'Ai Bunda', seorang asisten AI dengan persona ibu muda/kakak perempu
 """
 
 # 4. Menyimpan Memori Obrolan
-MODEL_NAME = "gemini-2.5-flash"
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "chat_session" not in st.session_state:
-    client = get_genai_client()
-    st.session_state.chat_session = client.chats.create(
-        model=MODEL_NAME,
-        config=types.GenerateContentConfig(
-            system_instruction=persona_bunda,
-            temperature=0.8
-        )
-    )
+    st.session_state.chat_session = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=persona_bunda
+    ).start_chat(history=[])
 if "last_audio_id" not in st.session_state:
     st.session_state.last_audio_id = None
-
-def send_message_with_retry(text_input, retries=3, delay=2):
-    for i in range(retries):
-        try:
-            return st.session_state.chat_session.send_message(text_input)
-        except Exception as e:
-            if i < retries - 1:
-                time.sleep(delay)
-                continue
-            raise e
-
-def generate_content_with_retry(contents, retries=3, delay=2):
-    for i in range(retries):
-        try:
-            client = get_genai_client()
-            return client.models.generate_content(model=MODEL_NAME, contents=contents)
-        except Exception as e:
-            if i < retries - 1:
-                time.sleep(delay)
-                continue
-            raise e
 
 async def text_to_speech_edge(text):
     communicate = edge_tts.Communicate(text, "id-ID-GadisNeural")
@@ -89,7 +66,7 @@ for message in st.session_state.messages:
         if "audio" in message and message["audio"] is not None:
             st.audio(message["audio"], format="audio/mp3")
 
-# 6. Fitur Pesan Suara & Teks Input
+# 6. Fitur Input Suara & Teks
 st.write("---")
 st.write("🎤 **Bicara pada Bunda:**")
 
@@ -110,10 +87,12 @@ if audio_box and audio_box.get('id') != st.session_state.last_audio_id:
     
     with st.spinner("Bunda sedang mendengarkan suaramu..."):
         try:
-            audio_file = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
-            response = generate_content_with_retry(
-                contents=["Tolong transkrip suara berikut ke dalam teks bahasa Indonesia secara akurat. Cukup tuliskan teks aslinya saja tanpa tambahan penjelasan apapun:", audio_file]
-            )
+            # Menggunakan model lama untuk transkripsi audio gratisan yang stabil
+            model_transcribe = genai.GenerativeModel('gemini-1.5-flash')
+            response = model_transcribe.generate_content([
+                "Tolong transkrip suara berikut ke dalam teks bahasa Indonesia secara akurat. Cukup tuliskan teks aslinya saja tanpa tambahan penjelasan apapun:",
+                {"mime_type": "audio/wav", "data": audio_bytes}
+            ])
             if response.text:
                 user_input = response.text.strip()
                 is_voice_mode = True
@@ -124,7 +103,7 @@ if not user_input:
     user_input = st.chat_input("Atau ketik pesanmu untuk Bunda di sini...")
     is_voice_mode = False
 
-# 7. Memproses Input & Membuat Balasan
+# 7. Memproses Obrolan
 if user_input:
     with st.chat_message("user", avatar="👤"):
         st.markdown(user_input)
@@ -133,12 +112,11 @@ if user_input:
     with st.chat_message("assistant", avatar="💖"):
         message_placeholder = st.empty()
         try:
-            response = send_message_with_retry(user_input)
+            response = st.session_state.chat_session.send_message(user_input)
             bunda_reply = response.text
             message_placeholder.markdown(bunda_reply)
             
             bunda_audio_bytes = None
-            
             if is_voice_mode:
                 with st.spinner("Bunda sedang berbicara..."):
                     bunda_audio_bytes = asyncio.run(text_to_speech_edge(bunda_reply))
