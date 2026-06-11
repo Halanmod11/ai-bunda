@@ -21,7 +21,7 @@ st.caption("Tempat bersandar, bercerita, dan mencari kedamaian hati seorang Ibu.
 st.divider()
 
 # 2. Inisialisasi API Key Utama
-API_KEY_1 = "AQ.Ab8RN6KS94PmEmZHXiuV3S5HnZt1VL-bNOwsPwRrc4t6KD5pSQ"
+API_KEY_1 = "AQ.Ab8RN6IPJfgc_Mg7izvy44OpFEEtssouZ3gdiZm_I02oBChJMw"
 
 def get_genai_client():
     return genai.Client(api_key=API_KEY_1)
