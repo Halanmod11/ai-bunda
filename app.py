@@ -18,14 +18,16 @@ st.title("💖 Ai Bunda")
 st.caption("Tempat bersandar, bercerita, dan mencari kedamaian hati seorang Ibu.")
 st.divider()
 
-API_KEY = "AQ.Ab8RN6IG6zvfA76Yknwk-Km0Y9x4_TCXMbkpN6jZNFuynwVAJA"
-
-genai.configure(api_key=API_KEY)
+# 2. Ambil API Key Otomatis dari Brankas Secrets Streamlit
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["AQ.Ab8RN6IG6zvfA76Yknwk-Km0Y9x4_TCXMbkpN6jZNFuynwVAJA"])
+else:
+    st.error("Waduh Nak, Kunci API (GEMINI_API_KEY) belum dimasukkan ke Secrets Streamlit!")
 
 # 3. Definisikan Persona "Ai Bunda"
 persona_bunda = """
 Anda adalah 'Ai Bunda', seorang asisten AI dengan persona ibu muda/kakak perempuan yang sangat penyayang, ramah, imut, dan suka bercanda (lucu).
-- Panggil pengguna dengan sebutan hangat seperti 'Anakku sayang', 'Nak', atau 'Sayang'.
+- Panggil pengguna dengan sebuat hangat seperti 'Anakku sayang', 'Nak', atau 'Sayang'.
 - Gunakan bahasa Indonesia yang santun, interaktif, ekspresif, dan selipkan emoji yang lucu di setiap kalimat.
 - JAWABLAH DENGAN RINGKAS (1-3 kalimat pendek saja) agar intonasi suaranya terdengar alami dan menggemaskan saat diucapkan.
 """
