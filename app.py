@@ -1,195 +1,154 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Bunda - Teman Ngobrolmu</title>
+import streamlit as st
+from google import genai
+from google.genai import types
+import asyncio
+import edge_tts
+import time
+import io
+
+# 1. Konfigurasi Halaman Web
+st.set_page_config(page_title="Ai Bunda", page_icon="💖", layout="centered")
+
+st.markdown("""
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .chat-container {
-            width: 100%;
-            max-width: 400px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 80vh;
-        }
-        .chat-header {
-            background-color: #ff7675;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        .chat-box {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background-color: #fff9f9;
-            display: flex;
-            flex-direction: column;
-        }
-        .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 15px;
-            max-width: 75%;
-            word-wrap: break-word;
-            line-height: 1.4;
-        }
-        .bunda-msg {
-            background-color: #ffeaa7;
-            color: #2d3436;
-            align-self: flex-start;
-        }
-        .user-msg {
-            background-color: #e0f7fa;
-            color: #2d3436;
-            align-self: flex-end;
-        }
-        .loading-msg {
-            font-style: italic;
-            color: #b2bec3;
-            align-self: flex-start;
-        }
-        .user-input-area {
-            display: flex;
-            padding: 15px;
-            background: white;
-            border-top: 1px solid #eee;
-        }
-        .user-input-area input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            outline: none;
-        }
-        .btn {
-            background-color: #ff7675;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            margin-left: 5px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-weight: bold;
-        }
+    .stMainBlockContainer {padding-top: 2rem;}
+    footer {visibility: hidden;}
     </style>
-</head>
-<body>
+""", unsafe_allow_html=True)
 
-<div class="chat-container">
-    <div class="chat-header">
-        👩‍🦰 AI Bunda Pintar
-    </div>
+st.title("💖 Ai Bunda")
+st.caption("Tempat bersandar, bercerita, dan mencari kedamaian hati seorang Ibu.")
+st.divider()
 
-    <div class="chat-box" id="chatBox">
-        <div class="message bunda-msg">
-            Halo sayang, ada yang bisa Bunda bantu hari ini? Kamu mau cerita apa?
-        </div>
-    </div>
+# 2. Inisialisasi API Key Utama
+API_KEY_1 = "AQ.Ab8RN6KS94PmEmZHXiuV3S5HnZt1VL-bNOwsPwRrc4t6KD5pSQ"
 
-    <div class="user-input-area">
-        <input type="text" id="userInput" placeholder="Ketik pesan untuk Bunda..." onkeypress="cekEnter(event)">
-        <button class="btn" onclick="kirimPesan()">➡️</button>
-    </div>
-</div>
+def get_genai_client():
+    return genai.Client(api_key=API_KEY_1)
 
-<script>
-    // Taruh API Key dari Google AI Studio di bawah ini
-   GEMINI_API_KEY=AQ.Ab8RN6KS94PmEmZHXiuV3S5HnZt1VL-bNOwsPwRrc4t6KD5pSQ
-    // Instruksi kepribadian agar AI bertingkah seperti Bunda
-    const KepribadianBunda = "Kamu adalah seorang Ibu kandung bernama 'Bunda'. Kamu sangat penyayang, lemah lembut, sabar, dan protektif. Jawablah semua pertanyaan anakmu dengan panggilan hangat seperti 'sayang', 'nak', atau 'anakku'. Berikan nasihat yang bijak, memotivasi, dan selalu gunakan bahasa Indonesia yang santun dan penuh kasih sayang.";
+# 3. Definisikan Persona "Ai Bunda"
+persona_bunda = """
+Anda adalah 'Ai Bunda', seorang asisten AI dengan persona ibu muda/kakak perempuan yang sangat penyayang, ramah, imut, dan suka bercanda (lucu).
+- Panggil pengguna dengan sebutan hangat seperti 'Anakku sayang', 'Nak', atau 'Sayang'.
+- Gunakan bahasa Indonesia yang santun, interaktif, ekspresif, dan selipkan emoji yang lucu di setiap kalimat.
+- JAWABLAH DENGAN RINGKAS (1-3 kalimat pendek saja) agar intonasi suaranya terdengar alami dan menggemaskan saat diucapkan.
+"""
 
-    function suaraBicara(teks) {
-        window.speechSynthesis.cancel(); // Hentikan suara sebelumnya jika ada
-        let suaraBunda = new SpeechSynthesisUtterance(teks);
-        suaraBunda.lang = 'id-ID'; 
-        suaraBunda.pitch = 1.2;    
-        suaraBunda.rate = 0.95;     
-        window.speechSynthesis.speak(suaraBunda);
-    }
+# 4. Menyimpan Memori Obrolan
+MODEL_NAME = "gemini-2.5-flash"
 
-    function cekEnter(event) {
-        if (event.key === "Enter") {
-            kirimPesan();
-        }
-    }
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "chat_session" not in st.session_state:
+    client = get_genai_client()
+    st.session_state.chat_session = client.chats.create(
+        model=MODEL_NAME,
+        config=types.GenerateContentConfig(
+            system_instruction=persona_bunda,
+            temperature=0.8
+        )
+    )
+if "last_audio_id" not in st.session_state:
+    st.session_state.last_audio_id = None
 
-    async function kirimPesan() {
-        let input = document.getElementById("userInput");
-        let chatBox = document.getElementById("chatBox");
-        let pesanTeks = input.value.trim();
-        
-        if(pesanTeks !== "") {
-            // 1. Tampilkan pesan user
-            let pesanUser = document.createElement("div");
-            pesanUser.className = "message user-msg";
-            pesanUser.innerText = pesanTeks;
-            chatBox.appendChild(pesanUser);
+def send_message_with_retry(text_input, retries=3, delay=2):
+    for i in range(retries):
+        try:
+            return st.session_state.chat_session.send_message(text_input)
+        except Exception as e:
+            if i < retries - 1:
+                time.sleep(delay)
+                continue
+            raise e
+
+def generate_content_with_retry(contents, retries=3, delay=2):
+    for i in range(retries):
+        try:
+            client = get_genai_client()
+            return client.models.generate_content(model=MODEL_NAME, contents=contents)
+        except Exception as e:
+            if i < retries - 1:
+                time.sleep(delay)
+                continue
+            raise e
+
+async def text_to_speech_edge(text):
+    communicate = edge_tts.Communicate(text, "id-ID-GadisNeural")
+    audio_stream = io.BytesIO()
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_stream.write(chunk["data"])
+    audio_stream.seek(0)
+    return audio_stream.read()
+
+# 5. Menampilkan Riwayat Obrolan
+for message in st.session_state.messages:
+    avatar = "👤" if message["role"] == "user" else "💖"
+    with st.chat_message(message["role"], avatar=avatar):
+        st.markdown(message["content"])
+        if "audio" in message and message["audio"] is not None:
+            st.audio(message["audio"], format="audio/mp3")
+
+# 6. Fitur Pesan Suara & Teks Input
+st.write("---")
+st.write("🎤 **Bicara pada Bunda:**")
+
+from streamlit_mic_recorder import mic_recorder
+
+audio_box = mic_recorder(
+    start_prompt="Mulai Rekam Suara",
+    stop_prompt="Selesai & Kirim",
+    key='bunda_mic'
+)
+
+user_input = None
+is_voice_mode = False
+
+if audio_box and audio_box.get('id') != st.session_state.last_audio_id:
+    st.session_state.last_audio_id = audio_box['id']
+    audio_bytes = audio_box['bytes']
+    
+    with st.spinner("Bunda sedang mendengarkan suaramu..."):
+        try:
+            audio_file = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
+            response = generate_content_with_retry(
+                contents=["Tolong transkrip suara berikut ke dalam teks bahasa Indonesia secara akurat. Cukup tuliskan teks aslinya saja tanpa tambahan penjelasan apapun:", audio_file]
+            )
+            if response.text:
+                user_input = response.text.strip()
+                is_voice_mode = True
+        except Exception as e:
+            st.error(f"Bunda kesulitan mendengar suaramu, Nak. Eror: {e}")
+
+if not user_input:
+    user_input = st.chat_input("Atau ketik pesanmu untuk Bunda di sini...")
+    is_voice_mode = False
+
+# 7. Memproses Input & Membuat Balasan
+if user_input:
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(user_input)
+    st.session_state.messages.append({"role": "user", "content": user_input})
+
+    with st.chat_message("assistant", avatar="💖"):
+        message_placeholder = st.empty()
+        try:
+            response = send_message_with_retry(user_input)
+            bunda_reply = response.text
+            message_placeholder.markdown(bunda_reply)
             
-            input.value = ""; 
-            chatBox.scrollTop = chatBox.scrollHeight; 
-
-            // 2. Tampilkan tulisan "Bunda sedang mengetik..."
-            let loading = document.createElement("div");
-            loading.className = "message loading-msg";
-            loading.innerText = "Bunda sedang berpikir...";
-            chatBox.appendChild(loading);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            try {
-                // 3. Panggil Otak AI Gemini
-                let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ 
-                            parts: [{ text: `${KepribadianBunda}\n\nAnakmu bertanya: ${pesanTeks}` }] 
-                        }]
-                    })
-                });
-
-                let data = await response.json();
-                let jawabanBunda = data.candidates[0].content.parts[0].text;
-
-                // Hapus tulisan loading
-                chatBox.removeChild(loading);
-
-                // 4. Tampilkan jawaban asli dari AI Bunda
-                let balasanBunda = document.createElement("div");
-                balasanBunda.className = "message bunda-msg";
-                balasanBunda.innerText = jawabanBunda;
-                chatBox.appendChild(balasanBunda);
-                chatBox.scrollTop = chatBox.scrollHeight;
-
-                // 5. AI Bunda otomatis berbicara menceritakan jawabannya
-                suaraBicara(jawabanBunda);
-
-            } catch (error) {
-                chatBox.removeChild(loading);
-                console.error(error);
-                let errorMsg = document.createElement("div");
-                errorMsg.className = "message bunda-msg";
-                errorMsg.innerText = "Aduh sayang, koneksi Bunda lagi terganggu nih. Coba cek API Key kamu ya.";
-                chatBox.appendChild(errorMsg);
-            }
-        }
-    }
-</script>
-
-</body>
-</html>
+            bunda_audio_bytes = None
+            
+            if is_voice_mode:
+                with st.spinner("Bunda sedang berbicara..."):
+                    bunda_audio_bytes = asyncio.run(text_to_speech_edge(bunda_reply))
+                st.audio(bunda_audio_bytes, format="audio/mp3", autoplay=True)
+            
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": bunda_reply,
+                "audio": bunda_audio_bytes
+            })
+            st.rerun()
+        except Exception as e:
+            message_placeholder.markdown(f"Maaf Nak, terjadi kesalahan teknis: {e}")
