@@ -17,7 +17,7 @@ st.caption("Tempat bersandar, bercerita, dan mencari kedamaian hati seorang Ibu.
 st.divider()
 
 # Inisialisasi model
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-1.5-pro")
 
 # Menyimpan riwayat pesan
 if "messages" not in st.session_state:
