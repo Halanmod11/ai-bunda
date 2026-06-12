@@ -4,22 +4,18 @@ import asyncio
 import edge_tts
 import io
 
-# 1. Konfigurasi Halaman Web
-st.set_page_config(page_title="Ai Bunda", page_icon="💖", layout="centered")
+# Konfigurasi Halaman
+st.set_page_config(page_title="Ai Bunda", page_icon="💖")
 
-# 2. Inisialisasi API Key dari Secrets Streamlit (AMAN & BENAR)
+# Ambil API Key dari Secrets (bukan dari dalam kode)
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-except Exception as e:
-    st.error("Kunci API belum ditemukan di Secrets Streamlit. Silakan atur di bagian Settings > Secrets.")
+    api_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=api_key)
+except Exception:
+    st.error("Waduh, kunci API belum diatur di Secrets. Tolong cek Settings > Secrets di Streamlit Cloud!")
     st.stop()
 
-# 3. Definisikan Persona & Model
-persona_bunda = "Anda adalah 'Ai Bunda', asisten yang penyayang dan imut. Gunakan bahasa Indonesia, santun, ringkas (1-3 kalimat), dan selipkan emoji."
+st.title("💖 Ai Bunda")
+st.write("Halo anakku sayang, Bunda siap mendengarkanmu.")
 
-if "chat_session" not in st.session_state:
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=persona_bunda)
-    st.session_state.chat_session = model.start_chat(history=[])
-
-# 4. Fungsi Suara & Chat (Sisanya tetap sama seperti kodemu)
-# [Fungsi text_to_speech_edge dan logika chat lainnya tetap di sini...]
+# Sisa kode kamu taruh di sini (persona, fungsi chat, dll)
